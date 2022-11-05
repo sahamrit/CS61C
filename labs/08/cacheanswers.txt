@@ -1,0 +1,72 @@
+Scenario 1: (using cache.s)
+    Cache Parameters:
+
+    Placement Policy: Direct Mapping
+    Block Replacement Policy: LRU
+    Set size (blocks): 1 (MARS won't let you change this, why?)
+    Number of blocks: 4
+    Cache block size (words): 2
+    Program Parameters:
+
+    Array Size: 128
+    Step Size: 8
+    Rep Count: 4
+    Option: 0
+    Questions:
+
+    What combination of parameters is producing the hit rate you observe? (Hint: Your answer should be of the form: "Because parameter A == parameter B")
+        Ans: Step Size = 8
+        tag00xxx, tag00xxx, tag01xxx, tag01xxx, tag10xxx, tag10xxx, tag10xxx, tag11xxx, tag11xxx
+    What is our hit rate if we increase Rep Count arbitrarily? Why?
+        Ans: 0 (since we hit the same block)
+    How could we modify our program parameters to maximize our hit rate?
+        Ans: Step Size = 1 (50% Hit Rate)
+        Since when we miss we load 2 words, so the next array access will always have a word. 50% since we will keep on missing as we progress access to higher 
+        memory and only after we have missed once, we will get the hit due to spatial locality.
+
+
+Scenario 2: (using cache.s)
+    Cache Parameters:
+
+    Placement Policy: N-way Set Associative
+    Block Replacement Policy: LRU
+    Set size (blocks): 4
+    Number of blocks: 16
+    Cache block size (words): 4
+    Program Parameters:
+
+    Array Size: 256
+    Step Size: 2
+    Rep Count: 1
+    Option: 1
+    Questions:
+
+    Analysis
+
+    Words Layout
+
+    tag00xxxx, tag00xxxx, tag00xxxx, tag00xxxx, - set 00 way1
+    tag01xxxx, tag01xxxx, tag01xxxx, tag01xxxx, 
+    tag10xxxx, tag10xxxx, tag10xxxx, tag10xxxx, 
+    tag11xxxx, tag11xxxx, tag11xxxx, tag11xxxx, 
+
+    tagA00xxxx, tagA00xxxx, tagA00xxxx, tagA00xxxx, - set 00 way2
+    tagA01xxxx, tagA01xxxx, tagA01xxxx, tagA01xxxx, 
+    tagA10xxxx, tagA10xxxx, tagA10xxxx, tagA10xxxx, 
+    tagA11xxxx, tagA11xxxx, tagA11xxxx, tagA11xxxx, 
+
+    tagB00xxxx, tagB00xxxx, tagB00xxxx, tagB00xxxx, - set 00 way3
+    tagB01xxxx, tagB01xxxx, tagB01xxxx, tagB01xxxx, 
+    tagB10xxxx, tagB10xxxx, tagB10xxxx, tagB10xxxx, 
+    tagB11xxxx, tagB11xxxx, tagB11xxxx, tagB11xxxx,
+
+    tagC00xxxx, tagC00xxxx, tagC00xxxx, tagC00xxxx, - set 00 way4
+    tagC01xxxx, tagC01xxxx, tagC01xxxx, tagC01xxxx, 
+    tagC10xxxx, tagC10xxxx, tagC10xxxx, tagC10xxxx, 
+    tagC11xxxx, tagC11xxxx, tagC11xxxx, tagC11xxxx,
+
+    Explain the hit rate in terms of the parameters of the cache and the program.
+        Ans: 50% hit rate, since we load 4 words on a miss and the step size is 2 words.
+    What happens to our hit rate as Rep Count goes to infinity? Why?
+        Ans: Hit rate -> 100% since after first pass all the tags are in cache & we access the same memory
+    Suppose we have a program that uses a very large array and during each Rep, we apply a different operator to the elements of our array (e.g. if Rep Count = 1024, we apply 1024 different operations to each of the array elements). How can we restructure our program to achieve a hit rate like that achieved in this scenario? (Assume that the number of operations we apply to each element is very large and that the result for each element can be computed independently of the other elements.) What is this technique called? (Hint)    
