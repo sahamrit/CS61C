@@ -70,3 +70,102 @@ Scenario 2: (using cache.s)
     What happens to our hit rate as Rep Count goes to infinity? Why?
         Ans: Hit rate -> 100% since after first pass all the tags are in cache & we access the same memory
     Suppose we have a program that uses a very large array and during each Rep, we apply a different operator to the elements of our array (e.g. if Rep Count = 1024, we apply 1024 different operations to each of the array elements). How can we restructure our program to achieve a hit rate like that achieved in this scenario? (Assume that the number of operations we apply to each element is very large and that the result for each element can be computed independently of the other elements.) What is this technique called? (Hint)    
+        Ans: Cache blocking - https://www.intel.com/content/www/us/en/developer/articles/technical/cache-blocking-techniques.html
+
+Scenario 3:
+    For the final scenario, we'll be using a new file: wackycache.s. Open it up in MARS and read through the pseudocode to make sure you understand what's happening.
+
+    Cache Parameters:
+
+    Placement Policy: N-way Set Associative
+    Block Replacement Policy: LRU
+    Set size (blocks): 4
+    Number of blocks: 16
+    Cache block size (words): 4
+    Program Parameters:
+
+    Array Size: 256
+    Step Size: 8
+    Rep Count: 2
+    Questions:
+
+    Run the simulation a few times. Note that the hit rate is non-deterministic. Why is this the case? Explain in terms of the cache parameters and our access pattern. ("The program is accessing random indicies" is not a sufficient answer).
+        Ans: Since there is a chance (yes/no) of accessing the next line of the cache more than once and get a cache hit, we are observing undeterministic behaviour. Example if accesses are from line 1-3-5 VS line 1-2(once only)-3-(4 once only), there will be more cache misses in second case. If we increase repetation cache hit rate -> 100% since the cache will entirely contain the array.
+    Which Cache parameter can you modify in order to get a constant hit rate? Record the parameter and its value (and be prepared to show your TA a few runs of the simulation). How does this parameter allow us to get a constant hit rate?
+        Ans:Placement Policy: N-way Set Associative
+            Block Replacement Policy: LRU
+            Set size (blocks): 4
+            Number of blocks: 8
+            Cache block size (words): 8
+
+Exercise 2: Loop Ordering and Matrix Multiplication
+    If you recall, matrices are 2-dimensional data structures wherein each data element is accessed via two indices. To multiply two matrices, we can simply use 3 nested loops, assuming that matrices A, B, and C are all n-by-n and stored in one-dimensional column-major arrays:
+
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            for (int k = 0; k < n; k++)
+                C[i+j*n] += A[i+k*n] * B[k+j*n];
+    Matrix multiplication operations are at the heart of many linear algebra algorithms, and efficient matrix multiplication is critical for many applications within the applied sciences.
+
+    In the above code, note that the loops are ordered i, j, k. If we examine the innermost loop (k), we see that it moves through B with stride 1, A with stride n and C with stride 0. To compute the matrix multiplication correctly, the loop order doesn't matter. However, the order in which we choose to access the elements of the matrices can have a large impact on performance. Caches perform better (more cache hits, fewer cache misses) when memory accesses exhibit spatial and temporal locality. Optimizing a program's memory access patterns is essential to obtaining good performance from the memory hierarchy.
+
+    Take a glance at matrixMultiply.c. You'll notice that the file contains multiple implementations of matrix multiply with 3 nested loops.
+
+    Note that the compilation command in the Makefile uses the '-O3' flag. It is important here that we use the '-O3' flag to turn on compiler optimizations.Compile and run this code with the following command, and then answer the questions below:
+
+    $ make ex2
+
+
+    Analysis:
+    ijk:    n = 1000, 1.793 Gflop/s
+    ikj:    n = 1000, 0.246 Gflop/s
+    jik:    n = 1000, 1.706 Gflop/s
+    jki:    n = 1000, 9.609 Gflop/s
+    kij:    n = 1000, 0.259 Gflop/s
+    kji:    n = 1000, 9.283 Gflop/s
+    
+    Which ordering(s) perform best for 1000-by-1000 matrices?
+    Ans: Higher flops is better
+    
+    How does the way we stride through the matrices with respect to the innermost loop affect performance?
+    Ans: Both stride 1 is better than (One stride 1 & One stride n) is better than Both stride n. Cache spatial locality property
+
+
+Cache Blocking
+    In the above code for matrix multiplication, note that we are striding across the entire A and B matrices to compute a single value of C. As such, we are constantly accessing new values from memory and obtain very little reuse of cached data! We can improve the amount of data reuse in the caches by implementing a technique called cache blocking. More formally, cache blocking is a technique that attempts to reduce the cache miss rate by improving the temporal and/or spatial locality of memory accesses. In the case of matrix transposition we consider performing the transposition one block at a time.
+
+
+
+    In the above image, we transpose each block Aij of matrix A into its final location in the output matrix, one block at a time. With this scheme, we significantly reduce the magnitude of the working set in cache during the processing of any one block. This (if implemented correctly) will result in a substantial improvement in performance. For this lab, you will implement a cache blocking scheme for matrix transposition and analyze its performance. You may also find this technique useful for Project 3.
+
+    Your task is to implement cache blocking in the transpose_blocking() function inside transpose.c. By default, the function does nothing, so the benchmark function will report an error. You may NOT assume that the matrix width (n) is a multiple of the blocksize. After you have implemented cache blocking, you can run your code by typing:
+
+    $ make ex3
+    $ ./transpose <n> <blocksize>
+    Where n, the width of the matrix, and blocksize are parameters that you will specify. You can verify that your code is working by setting n=1000 and blocksize=33 Once your code is working, complete the following exercises and record your answers (we will ask about it during checkoff).
+
+    Part 1: Changing Array Sizes
+    Fix the blocksize to be 20, and run your code with n equal to 100, 1000, 2000, 5000, and 10000. At what point does cache blocked version of transpose become faster than the non-cache blocked version? Why does cache blocking require the matrix to be a certain size before it outperforms the non-cache blocked code?
+    
+    Ans: Overhead of additional loops and operations intially.
+
+
+    Part 2: Changing Blocksize
+    Fix n to be 10000, and run your code with blocksize equal to 50, 100, 500, 1000, 5000. How does performance change as the blocksize increases? Why is this the case?
+
+    Ans: decrease and then increases, since at a point cache size is insufficient 5000* 32 bit = 20 KB.
+        amrit@amrit-Lenovo-Y520-15IKBN:~/CS61C/labs/08$ ./transpose 10000 50
+        Testing naive transpose: 655.812 milliseconds
+        Testing transpose with blocking: 143.038 milliseconds
+        amrit@amrit-Lenovo-Y520-15IKBN:~/CS61C/labs/08$ ./transpose 10000 100
+        Testing naive transpose: 659.804 milliseconds
+        Testing transpose with blocking: 130.224 milliseconds
+        amrit@amrit-Lenovo-Y520-15IKBN:~/CS61C/labs/08$ ./transpose 10000 500
+        Testing naive transpose: 655.26 milliseconds
+        Testing transpose with blocking: 150.695 milliseconds
+        amrit@amrit-Lenovo-Y520-15IKBN:~/CS61C/labs/08$ ./transpose 10000 1000
+        Testing naive transpose: 656.583 milliseconds
+        Testing transpose with blocking: 176.41 milliseconds
+        amrit@amrit-Lenovo-Y520-15IKBN:~/CS61C/labs/08$ ./transpose 10000 5000
+        Testing naive transpose: 663.716 milliseconds
+        Testing transpose with blocking: 652.756 milliseconds
