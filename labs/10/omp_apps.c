@@ -107,11 +107,35 @@ double dotp_naive(double *x, double *y, int arr_size)
 double dotp_manual_optimized(double *x, double *y, int arr_size)
 {
     double global_sum = 0.0;
-    // TODO: Implement this function
-    // Do NOT use the `reduction` directive here!
+#pragma omp parallel
+    {
+        double local_sum = 0;
+#pragma omp for
+        for (int i = 0; i < arr_size; i++)
+            local_sum += x[i] * y[i];
+#pragma omp critical
+        global_sum += local_sum;
+    }
     return global_sum;
 }
-
+// Naive: 1 thread took 4.358808 seconds
+// Manual Optimized: 1 thread(s) took 0.833744 seconds
+// Manual Optimized: 2 thread(s) took 0.442590 seconds
+// Manual Optimized: 3 thread(s) took 0.306795 seconds
+// Manual Optimized: 4 thread(s) took 0.243372 seconds
+// Manual Optimized: 5 thread(s) took 0.251273 seconds
+// Manual Optimized: 6 thread(s) took 0.243337 seconds
+// Manual Optimized: 7 thread(s) took 0.218838 seconds
+// Manual Optimized: 8 thread(s) took 0.229458 seconds
+// Reduction Optimized: 1 thread(s) took 0.843711 seconds
+// Reduction Optimized: 2 thread(s) took 0.442290 seconds
+// Reduction Optimized: 3 thread(s) took 0.302640 seconds
+// Reduction Optimized: 4 thread(s) took 0.288925 seconds
+// Reduction Optimized: 5 thread(s) took 0.250923 seconds
+// Reduction Optimized: 6 thread(s) took 0.242683 seconds
+// Reduction Optimized: 7 thread(s) took 0.219684 seconds
+// Reduction Optimized: 8 thread(s) took 0.231989 seconds
+// Congrats! All dotp tests passed
 // Reduction Keyword
 double dotp_reduction_optimized(double *x, double *y, int arr_size)
 {
